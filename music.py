@@ -90,7 +90,7 @@ def list_songs():
             song_list = q.queue.copy()
 
         if len(song_list) > 0:
-            titoli = [record.title for record in song_list]
+            titoli = ['    ' + record.title for record in song_list]
             output.extend(titoli)
     return '<br/>'.join(output)
 
