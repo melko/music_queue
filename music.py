@@ -4,9 +4,9 @@ import subprocess
 import threading
 import pickle
 import copy
+from lxml.html import parse as parse_html
 from socket import gethostbyaddr
 from collections import namedtuple
-from bs4 import BeautifulSoup
 from urllib.request import urlopen
 from queue import Queue
 from flask import Flask
@@ -186,7 +186,7 @@ def player_kill():
 @app.route('/youtube/<string:ytid>')
 def load_youtube(ytid):
     tmp_url = YT_URL + ytid
-    tmp_title = BeautifulSoup(urlopen(tmp_url), 'lxml').title.text
+    tmp_title = parse_html(urlopen(tmp_url)).find('.//title').text
     tmp_submitter_ip = request.remote_addr
     tmp_submitter = gethostbyaddr(tmp_submitter_ip)[0]
 
