@@ -118,7 +118,7 @@ def player_skip():
     if player is not None:
         tmp_ip = request.remote_addr
         skip_requests.add(tmp_ip)
-        if len(a) >= SKIP_THRESHOLD or tmp_ip == now_playing.submitter_ip:
+        if len(skip_requests) >= SKIP_THRESHOLD or tmp_ip == now_playing.submitter_ip:
             player.kill()
             player = None
             return 'DONE'
