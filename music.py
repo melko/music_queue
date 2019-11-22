@@ -14,7 +14,7 @@ app = Flask(__name__)
 
 YT_URL = r'https://www.youtube.com/watch?v='
 
-RecordType = namedtuple('RecordType', ['title', 'url', 'submitter'])
+RecordType = namedtuple('RecordType', ['title', 'url', 'submitter_host', 'submitter_ip'])
 
 song_queue = Queue()
 player = None
@@ -61,7 +61,7 @@ def list_songs():
         song_list = song_queue.queue.copy()
 
     if len(song_list) > 0:
-        titoli = [record.title + '     submitted from ' + record.submitter for record in song_list]
+        titoli = [record.title + '     submitted from ' + record.submitter_host for record in song_list]
         return '<br/>'.join(titoli)
     else:
         return 'Queue is empty'
@@ -111,7 +111,10 @@ def load_youtube(ytid):
     tmp_title = BeautifulSoup(urlopen(tmp_url), 'lxml').title.string
     tmp_submitter = gethostbyaddr(request.remote_addr)[0]
 
-    tmp_record = RecordType(title=tmp_title, url=tmp_url, submitter=tmp_submitter)
+    if tmp_title == 'YouTube':
+        return 'Invalid youtube id {}'.format(ytid)
+
+    tmp_record = RecordType(title=tmp_title, url=tmp_url, submitter_host=tmp_submitter, submitter_ip=request.remote_addr)
     song_queue.put(tmp_record)
     elements = song_queue.qsize()
     return '{}<br/>{}<br/>Queue size:{}'.format(tmp_title, tmp_submitter, elements)
