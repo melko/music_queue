@@ -13,10 +13,12 @@ from flask import request
 app = Flask(__name__)
 
 YT_URL = r'https://www.youtube.com/watch?v='
+SKIP_THRESHOLD = 3
 
 RecordType = namedtuple('RecordType', ['title', 'url', 'submitter_host', 'submitter_ip'])
 
 song_queues = dict()
+skip_requests = set()
 player = None
 terminate = False
 player_thread = None
@@ -45,10 +47,12 @@ def main_player_loop():
 
             player = subprocess.Popen(['mpv', '--no-video', song_url])
             player.wait()
+            skip_requests.clear()
             now_playing = None
             player = None
     now_playing = None
     player = None
+    skip_requests.clear()
 
 
 @app.route('/help')
@@ -112,9 +116,14 @@ def player_skip():
     global player
 
     if player is not None:
-        player.kill()
-        player = None
-        return 'DONE'
+        tmp_ip = request.remote_addr
+        skip_requests.add(tmp_ip)
+        if len(a) >= SKIP_THRESHOLD or tmp_ip == now_playing.submitter_ip:
+            player.kill()
+            player = None
+            return 'DONE'
+        else:
+            return 'skip counter increased to {}'.format(len(skip_requests))
     return 'nothing is being played'
 
 
