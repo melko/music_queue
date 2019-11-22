@@ -1,3 +1,4 @@
 *.pyc
 veenv
 venv
+music_queue.dat
