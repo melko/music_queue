@@ -16,7 +16,7 @@ YT_URL = r'https://www.youtube.com/watch?v='
 
 RecordType = namedtuple('RecordType', ['title', 'url', 'submitter_host', 'submitter_ip'])
 
-song_queue = Queue()
+song_queues = dict()
 player = None
 terminate = False
 player_thread = None
@@ -31,15 +31,19 @@ def main_player_loop():
 
 
     while terminate == False:
-        try:
-            tmp_record = song_queue.get(timeout=1)
-            song_url = tmp_record.url
-        except:
-            pass
-        else:
-            player = subprocess.Popen(['mpv', '--no-video', song_url])
-            player.wait()
-            player = None
+        tmp_queues = list(song_queues.items())
+        for (tmp_ip, q) in tmp_queues:
+            if q.qsize() == 0: # queue for this user is empty, skip
+                continue
+            try:
+                tmp_record = q.get(timeout=1)
+                song_url = tmp_record.url
+            except:
+                pass
+            else:
+                player = subprocess.Popen(['mpv', '--no-video', song_url])
+                player.wait()
+                player = None
     player = None
 
 
@@ -51,20 +55,37 @@ def help():
 
 @app.route('/flush')
 def flush_queue():
-    with song_queue.mutex:
-        song_queue.queue.clear()
-    return 'queue flushed'
+    tmp_ip = request.remote_addr
+    if tmp_ip in song_queues:
+        tmp_queue = song_queues[tmp_ip]
+        with tmp_queue.mutex:
+            tmp_queue.queue.clear()
+        return 'queue flushed'
+    else:
+        return 'No queue for this user'
+
+@app.route('/flush_all')
+def flush_all_queues():
+    for q in song_queues.values():
+        with q.mutex:
+            q.queue.clear()
+    return 'Flushed all queues'
 
 @app.route('/')
 def list_songs():
-    with song_queue.mutex:
-        song_list = song_queue.queue.copy()
+    output = []
+    for (tmp_ip, q) in song_queues.items():
+        tmp_hostname = gethostbyaddr(tmp_ip)[0]
 
-    if len(song_list) > 0:
-        titoli = [record.title + '     submitted from ' + record.submitter_host for record in song_list]
-        return '<br/>'.join(titoli)
-    else:
-        return 'Queue is empty'
+        output.append('From {}:'.format(tmp_hostname))
+
+        with q.mutex:
+            song_list = q.queue.copy()
+
+        if len(song_list) > 0:
+            titoli = [record.title for record in song_list]
+            output.extend(titoli)
+    return '<br/>'.join(output)
 
 
 @app.route('/start')
@@ -109,14 +130,21 @@ def player_kill():
 def load_youtube(ytid):
     tmp_url = YT_URL + ytid
     tmp_title = BeautifulSoup(urlopen(tmp_url), 'lxml').title.string
-    tmp_submitter = gethostbyaddr(request.remote_addr)[0]
+    tmp_submitter_ip = request.remote_addr
+    tmp_submitter = gethostbyaddr(tmp_submitter_ip)[0]
 
     if tmp_title == 'YouTube':
         return 'Invalid youtube id {}'.format(ytid)
 
-    tmp_record = RecordType(title=tmp_title, url=tmp_url, submitter_host=tmp_submitter, submitter_ip=request.remote_addr)
-    song_queue.put(tmp_record)
-    elements = song_queue.qsize()
+    if tmp_submitter_ip not in song_queues:
+        q = Queue()
+        song_queues[tmp_submitter_ip] = q
+    else:
+        q = song_queues[tmp_submitter_ip]
+
+    tmp_record = RecordType(title=tmp_title, url=tmp_url, submitter_host=tmp_submitter, submitter_ip=tmp_submitter_ip)
+    q.put(tmp_record)
+    elements = q.qsize()
     return '{}<br/>{}<br/>Queue size:{}'.format(tmp_title, tmp_submitter, elements)
 
 
