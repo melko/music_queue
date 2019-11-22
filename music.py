@@ -2,6 +2,8 @@
 
 import subprocess
 import threading
+from socket import gethostbyaddr
+from collections import namedtuple
 from bs4 import BeautifulSoup
 from urllib.request import urlopen
 from queue import Queue
@@ -11,6 +13,8 @@ from flask import request
 app = Flask(__name__)
 
 YT_URL = r'https://www.youtube.com/watch?v='
+
+RecordType = namedtuple('RecordType', ['title', 'url', 'submitter'])
 
 song_queue = Queue()
 player = None
@@ -28,7 +32,8 @@ def main_player_loop():
 
     while terminate == False:
         try:
-            song_url = song_queue.get(timeout=1)
+            tmp_record = song_queue.get(timeout=1)
+            song_url = tmp_record.url
         except:
             pass
         else:
@@ -38,10 +43,10 @@ def main_player_loop():
     player = None
 
 
-@app.route('/')
-def main():
+@app.route('/help')
+def help():
     routes = [str(r) for r in app.url_map.iter_rules()]
-    return '<br>'.join(routes)
+    return '<br/>'.join(routes)
 
 
 @app.route('/flush')
@@ -50,13 +55,16 @@ def flush_queue():
         song_queue.queue.clear()
     return 'queue flushed'
 
-@app.route('/list')
+@app.route('/')
 def list_songs():
     with song_queue.mutex:
         song_list = song_queue.queue.copy()
 
-    titoli = [BeautifulSoup(urlopen(url), 'lxml').title.string for url in song_list]
-    return '<br>'.join(titoli)
+    if len(song_list) > 0:
+        titoli = [record.title + '     submitted from ' + record.submitter for record in song_list]
+        return '<br/>'.join(titoli)
+    else:
+        return 'Queue is empty'
 
 
 @app.route('/start')
@@ -99,11 +107,14 @@ def player_kill():
 
 @app.route('/youtube/<string:ytid>')
 def load_youtube(ytid):
-    global player
+    tmp_url = YT_URL + ytid
+    tmp_title = BeautifulSoup(urlopen(tmp_url), 'lxml').title.string
+    tmp_submitter = gethostbyaddr(request.remote_addr)[0]
 
-    song_queue.put(YT_URL + ytid)
+    tmp_record = RecordType(title=tmp_title, url=tmp_url, submitter=tmp_submitter)
+    song_queue.put(tmp_record)
     elements = song_queue.qsize()
-    return 'yt {} {} {}'.format(ytid, request.remote_addr, elements)
+    return '{}<br/>{}<br/>Queue size:{}'.format(tmp_title, tmp_submitter, elements)
 
 
 if __name__ == '__main__':
