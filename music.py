@@ -20,10 +20,12 @@ song_queues = dict()
 player = None
 terminate = False
 player_thread = None
+now_playing = None
 
 def main_player_loop():
     global player
     global terminate
+    global now_playing
 
     print('Main player loop started')
 
@@ -36,14 +38,16 @@ def main_player_loop():
             if q.qsize() == 0: # queue for this user is empty, skip
                 continue
             try:
-                tmp_record = q.get(timeout=1)
-                song_url = tmp_record.url
+                now_playing = q.get(timeout=1)
+                song_url = now_playing.url
             except:
-                pass
-            else:
-                player = subprocess.Popen(['mpv', '--no-video', song_url])
-                player.wait()
-                player = None
+                continue
+
+            player = subprocess.Popen(['mpv', '--no-video', song_url])
+            player.wait()
+            now_playing = None
+            player = None
+    now_playing = None
     player = None
 
 
@@ -74,6 +78,9 @@ def flush_all_queues():
 @app.route('/')
 def list_songs():
     output = []
+
+    if now_playing is not None:
+        output.append('Now playing: {}   submitted by {}<br/><br/>'.format(now_playing.title, now_playing.submitter_host))
     for (tmp_ip, q) in song_queues.items():
         tmp_hostname = gethostbyaddr(tmp_ip)[0]
 
