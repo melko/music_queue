@@ -35,7 +35,7 @@ def main_player_loop():
 
 
     while terminate == False:
-        tmp_queues = list(song_queues.items())
+        tmp_queues = reversed(list(song_queues.items()))
         for (tmp_ip, q) in tmp_queues:
             if q.qsize() == 0: # queue for this user is empty, skip
                 continue
@@ -84,7 +84,7 @@ def list_songs():
     output = []
 
     if now_playing is not None:
-        output.append('Now playing: {}   submitted by {}<br/><br/>'.format(now_playing.title, now_playing.submitter_host))
+        output.append('Now playing: {} &emsp; submitted by {}<br/><br/>'.format(now_playing.title, now_playing.submitter_host))
     for (tmp_ip, q) in song_queues.items():
         tmp_hostname = gethostbyaddr(tmp_ip)[0]
 
@@ -94,7 +94,7 @@ def list_songs():
             song_list = q.queue.copy()
 
         if len(song_list) > 0:
-            titoli = ['    ' + record.title for record in song_list]
+            titoli = ['&emsp; ' + record.title for record in song_list]
             output.extend(titoli)
     return '<br/>'.join(output)
 
