@@ -2,6 +2,8 @@
 
 import subprocess
 import threading
+import pickle
+import copy
 from socket import gethostbyaddr
 from collections import namedtuple
 from bs4 import BeautifulSoup
@@ -14,6 +16,7 @@ app = Flask(__name__)
 
 YT_URL = r'https://www.youtube.com/watch?v='
 SKIP_THRESHOLD = 3
+QUEUE_FILE = 'music_queue.dat'
 
 RecordType = namedtuple('RecordType', ['title', 'url', 'submitter_host', 'submitter_ip'])
 
@@ -37,6 +40,8 @@ def main_player_loop():
     while terminate == False:
         tmp_queues = reversed(list(song_queues.items()))
         for (tmp_ip, q) in tmp_queues:
+            if terminate == True:
+                break
             if q.qsize() == 0: # queue for this user is empty, skip
                 continue
             try:
@@ -45,14 +50,47 @@ def main_player_loop():
             except:
                 continue
 
-            player = subprocess.Popen(['mpv', '--no-video', song_url])
+            player = subprocess.Popen(['mpv', '--no-video', song_url], stdout=subprocess.DEVNULL)
             player.wait()
             skip_requests.clear()
+            dump_queue()
             now_playing = None
             player = None
     now_playing = None
     player = None
     skip_requests.clear()
+
+
+def dump_queue():
+    file = open(QUEUE_FILE, 'wb')
+    tmp_dump = dict()
+
+    for (tmp_ip, q) in song_queues.items():
+        with q.mutex:
+            tmp_dump[tmp_ip] = q.queue.copy()
+    pickle.dump(tmp_dump, file)
+    file.close()
+
+
+def restore_queue():
+    global song_queues
+
+    try:
+        file = open(QUEUE_FILE, 'rb')
+    except:
+        print('Nothing to restore')
+        return
+
+    try:
+        tmp_dict = pickle.load(file)
+    except:
+        print('Failed restoring queue')
+        tmp_dict = dict()
+    file.close()
+
+    for (tmp_ip, q) in tmp_dict.items():
+        song_queues[tmp_ip] = Queue()
+        song_queues[tmp_ip].queue.extend(q)
 
 
 @app.route('/help')
@@ -104,6 +142,7 @@ def player_start():
     global player_thread
 
     if player_thread is None:
+        restore_queue()
         player_thread = threading.Thread(target=main_player_loop)
         player_thread.start()
         return 'player started'
@@ -137,6 +176,8 @@ def player_kill():
     ret = player_skip()
     player_thread.join()
     player_thread = None
+
+    dump_queue()
     flush_queue()
 
     return ret
@@ -145,7 +186,7 @@ def player_kill():
 @app.route('/youtube/<string:ytid>')
 def load_youtube(ytid):
     tmp_url = YT_URL + ytid
-    tmp_title = BeautifulSoup(urlopen(tmp_url), 'lxml').title.string
+    tmp_title = BeautifulSoup(urlopen(tmp_url), 'lxml').title.text
     tmp_submitter_ip = request.remote_addr
     tmp_submitter = gethostbyaddr(tmp_submitter_ip)[0]
 
@@ -161,10 +202,13 @@ def load_youtube(ytid):
     tmp_record = RecordType(title=tmp_title, url=tmp_url, submitter_host=tmp_submitter, submitter_ip=tmp_submitter_ip)
     q.put(tmp_record)
     elements = q.qsize()
+
+    dump_queue()
     return '{}<br/>{}<br/>Queue size:{}'.format(tmp_title, tmp_submitter, elements)
 
 
 if __name__ == '__main__':
     player_thread = threading.Thread(target=main_player_loop)
+    restore_queue()
     player_thread.start()
     app.run(host='0.0.0.0')
