@@ -157,7 +157,7 @@ def player_start():
 def player_skip():
     global player
 
-    if player is not None:
+    if player is not None and now_playing is not None:
         tmp_ip = request.remote_addr
         skip_requests.add(tmp_ip)
         if len(skip_requests) >= SKIP_THRESHOLD or tmp_ip == now_playing.submitter_ip:
@@ -185,16 +185,19 @@ def player_kill():
     global player_thread
 
     terminate = True
-    ret = player_skip()
-    player_thread.join()
-    player_thread = None
-    player.terminate()
-    player = None
+    if player is not None:
+        player.terminate()
+        player = None
+    #ret = player_skip()
+    if player_thread is not None:
+        player_thread.join()
+        player_thread = None
 
+    # killing twice remove the dump this way
     dump_queue()
     flush_queue()
 
-    return ret
+    return 'killed'
 
 
 @app.route('/remove/<int:n>')
