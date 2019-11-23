@@ -168,6 +168,16 @@ def player_skip():
     return 'nothing is being played'
 
 
+@app.route('/pause')
+def player_toggle_pause():
+    global player
+
+    if player is not None:
+        player.pause = not player.pause
+        return 'PAUSE set to {}'.format(player.pause)
+    return 'no player found'
+
+
 @app.route('/kill')
 def player_kill():
     global player
