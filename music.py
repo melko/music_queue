@@ -197,6 +197,23 @@ def player_kill():
     return ret
 
 
+@app.route('/remove/<int:n>')
+def remove_song(n):
+    tmp_submitter_ip = request.remote_addr
+
+    if tmp_submitter_ip not in song_queues:
+        return 'no queue for this ip'
+
+    q = song_queues[tmp_submitter_ip]
+    with q.mutex:
+        try:
+            tmp_record = q.queue[n]
+        except IndexError:
+            return 'No song found at position {}'.format(n)
+        return_string = '{} &emsp removed from the queue'.format(tmp_record.title)
+        del q.queue[n]
+    return return_string
+
 @app.route('/youtube/<string:ytid>')
 def load_youtube(ytid):
     tmp_url = YT_URL + ytid
