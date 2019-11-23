@@ -4,6 +4,7 @@ import threading
 import pickle
 import copy
 import mpv
+import time
 from lxml.html import parse as parse_html
 from socket import gethostbyaddr
 from collections import namedtuple
@@ -58,6 +59,7 @@ def main_player_loop():
             skip_requests.clear()
             dump_queue()
             now_playing = None
+        time.sleep(1)
     now_playing = None
     skip_requests.clear()
 
