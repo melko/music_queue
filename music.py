@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 
-import subprocess
 import threading
 import pickle
 import copy
+import mpv
 from lxml.html import parse as parse_html
 from socket import gethostbyaddr
 from collections import namedtuple
@@ -36,6 +36,9 @@ def main_player_loop():
 
     terminate = False
 
+    if player is None:
+        player = mpv.MPV(video=False, ytdl=True)
+
 
     while terminate == False:
         tmp_queues = reversed(list(song_queues.items()))
@@ -50,14 +53,12 @@ def main_player_loop():
             except:
                 continue
 
-            player = subprocess.Popen(['mpv', '--no-video', song_url], stdout=subprocess.DEVNULL)
-            player.wait()
+            player.play(song_url)
+            player.wait_for_playback()
             skip_requests.clear()
             dump_queue()
             now_playing = None
-            player = None
     now_playing = None
-    player = None
     skip_requests.clear()
 
 
@@ -158,8 +159,7 @@ def player_skip():
         tmp_ip = request.remote_addr
         skip_requests.add(tmp_ip)
         if len(skip_requests) >= SKIP_THRESHOLD or tmp_ip == now_playing.submitter_ip:
-            player.kill()
-            player = None
+            player.playlist_remove()
             return 'DONE'
         else:
             return 'skip counter increased to {}'.format(len(skip_requests))
@@ -176,6 +176,8 @@ def player_kill():
     ret = player_skip()
     player_thread.join()
     player_thread = None
+    player.terminate()
+    player = None
 
     dump_queue()
     flush_queue()
