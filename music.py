@@ -141,6 +141,15 @@ def list_songs():
     return '<br/>'.join(output)
 
 
+@app.route('/volume/<int:v>')
+def set_volume(v):
+    if player is None:
+        return 'Start player first'
+    if v < 0 or v > 100:
+        return 'Invalid value'
+    player.volume = v
+    return 'Volume set to {}'.format(v)
+
 @app.route('/start')
 def player_start():
     global player_thread
