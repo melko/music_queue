@@ -125,7 +125,8 @@ def list_songs():
     output = []
 
     if now_playing is not None:
-        output.append('Now playing: {} &emsp; submitted by {}<br/><br/>'.format(now_playing.title, now_playing.submitter_host))
+        output.append('Now playing: {} &emsp; submitted by {}'.format(now_playing.title, now_playing.submitter_host))
+        output.append('Duration: {}/{}s - Volume: {}% - Paused: {}<br/><br/>'.format(int(player.time_pos), int(player.duration), player.volume, player.pause))
     for (tmp_ip, q) in song_queues.items():
         tmp_hostname = gethostbyaddr(tmp_ip)[0]
 
