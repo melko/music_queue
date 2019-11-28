@@ -244,7 +244,7 @@ def remove_song(n):
             tmp_record = q.queue[n]
         except IndexError:
             return 'No song found at position {}'.format(n)
-        return_string = '{} &emsp removed from the queue'.format(tmp_record.title)
+        return_string = '{} &emsp; removed from the queue'.format(tmp_record.title)
         del q.queue[n]
     return return_string
 
