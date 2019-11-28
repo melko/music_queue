@@ -135,12 +135,11 @@ def list_songs():
     for (tmp_ip, q) in song_queues.items():
         tmp_hostname = gethostbyaddr(tmp_ip)[0]
 
-        output.append('From {}:'.format(tmp_hostname))
-
         with q.mutex:
             song_list = q.queue.copy()
 
         if len(song_list) > 0:
+            output.append('From {}:'.format(tmp_hostname))
             titoli = ['&emsp; ' + record.title for record in song_list]
             output.extend(titoli)
     return '<br/>'.join(output)
