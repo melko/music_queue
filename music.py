@@ -215,6 +215,22 @@ def player_kill():
     return 'killed'
 
 
+@app.route('/move/<int:n>')
+def make_first(n):
+    tmp_submitter_ip = request.remote_addr
+
+    if tmp_submitter_ip not in song_queues:
+        return 'no queue for this ip'
+
+    q = song_queues[tmp_submitter_ip]
+    with q.mutex:
+        try:
+            q.queue[0], q.queue[n] = q.queue[n], q.queue[0]
+        except IndexError:
+            return 'No song found at position {}'.format(n)
+    return 'DONE'
+
+
 @app.route('/remove/<int:n>')
 def remove_song(n):
     tmp_submitter_ip = request.remote_addr
