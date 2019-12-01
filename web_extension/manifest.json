@@ -1,0 +1,41 @@
+{
+
+  "manifest_version": 2,
+  "name": "Send to Music-Queue",
+  "version": "1.2",
+
+  "description": "Invia i video da YouTube sulla coda.",
+
+  "icons": {
+    "48": "icons/logo-48.png"
+  },
+
+  "browser_action": {
+    "default_icon": "icons/logo-48.png",
+    "default_title": "Send to Music-Queue"
+  },
+
+  "background": {
+    "scripts": [
+      "background.js"
+    ]
+  },
+
+  "options_ui": {
+    "page": "options/options.html",
+    "browser_style": true
+  },
+
+  "permissions": [
+    "activeTab",
+    "contextMenus",
+    "storage"
+  ],
+
+  "browser_specific_settings": {
+    "gecko": {
+      "id": "{ce205dbb-e8a9-4adc-aaa0-01455ea3ac0a}",
+      "strict_min_version": "42.0"
+    }
+  }
+}
