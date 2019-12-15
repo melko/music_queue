@@ -32,7 +32,7 @@ browser.storage.onChanged.addListener((changes, areaName) => {
     // assume areaName is always local for now
     console.log("Storage changed");
     for (var s in changes) {
-        console.log(`AAA ${s}: ${changes[s].newValue}`);
+        console.log(`${s} -> ${changes[s].newValue}`);
         settings[s] = changes[s].newValue;
     }
 });
@@ -61,7 +61,11 @@ function youtube_parser(url){
 
 function checkStoredSettings(storedSettings) {
     console.log("Checking stored settings");
+    Object.assign(settings, storedSettings);
+
+    // save default if not existent
     if (!storedSettings.server_url) {
+        console.log("Restoring server_url");
         browser.storage.local.set(settings);
     }
 }
